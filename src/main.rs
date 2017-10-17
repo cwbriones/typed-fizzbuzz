@@ -87,39 +87,35 @@ type Sub<T, U> = <T as Sub_<U>>::Res;
 
 // Divisibility Checks
 
-trait Div3 {
+trait Div<I> {
     type Out: Bool;
 }
 
-impl<T> Div3 for S<T>
+impl<T> Div<N3> for S<T>
     where
         S<T>: Sub_<N3>,
-        Sub<S<T>, N3>: Div3,
+        Sub<S<T>, N3>: Div<N3>,
 {
-    type Out = <Sub<S<T>, N3> as Div3>::Out;
+    type Out = <Sub<S<T>, N3> as Div<N3>>::Out;
 }
 
-impl Div3 for Zero { type Out = True; }
-impl Div3 for N1 { type Out = False; }
-impl Div3 for N2 { type Out = False; }
+impl Div<N3> for Zero { type Out = True; }
+impl Div<N3> for N1 { type Out = False; }
+impl Div<N3> for N2 { type Out = False; }
 
-trait Div5 {
-    type Out: Bool;
-}
-
-impl<T> Div5 for S<T>
+impl<T> Div<N5> for S<T>
     where
         S<T>: Sub_<N5>,
-        Sub<S<T>, N5>: Div5,
+        Sub<S<T>, N5>: Div<N5>,
 {
-    type Out = <Sub<S<T>, N5> as Div5>::Out;
+    type Out = <Sub<S<T>, N5> as Div<N5>>::Out;
 }
 
-impl Div5 for Zero { type Out = True; }
-impl Div5 for N1 { type Out = False; }
-impl Div5 for N2 { type Out = False; }
-impl Div5 for N3 { type Out = False; }
-impl Div5 for N4 { type Out = False; }
+impl Div<N5> for Zero { type Out = True; }
+impl Div<N5> for N1 { type Out = False; }
+impl Div<N5> for N2 { type Out = False; }
+impl Div<N5> for N3 { type Out = False; }
+impl Div<N5> for N4 { type Out = False; }
 
 // Boolean Algebra
 
@@ -198,11 +194,11 @@ trait FizzBuzz_ {
 
 impl<T: Peano> FizzBuzz_ for T
     where
-        T: Div3,
-        T: Div5,
-        (<T as Div3>::Out, <T as Div5>::Out, T): FizzBuzz_
+        T: Div<N3>,
+        T: Div<N5>,
+        (<T as Div<N3>>::Out, <T as Div<N5>>::Out, T): FizzBuzz_
 {
-    type Out = <(<T as Div3>::Out, <T as Div5>::Out, T) as FizzBuzz_>::Out;
+    type Out = <(<T as Div<N3>>::Out, <T as Div<N5>>::Out, T) as FizzBuzz_>::Out;
 }
 
 impl<T: Peano> FizzBuzz_ for (True, False, T) {
@@ -226,9 +222,9 @@ struct FizzBuzzFn;
 impl<T> Apply<T> for FizzBuzzFn
     where
         T: Peano,
-        T: Div3,
-        T: Div5,
-        (<T as Div3>::Out, <T as Div5>::Out, T): FizzBuzz_
+        T: Div<N3>,
+        T: Div<N5>,
+        (<T as Div<N3>>::Out, <T as Div<N5>>::Out, T): FizzBuzz_
 {
     type Res = <T as FizzBuzz_>::Out;
 }
