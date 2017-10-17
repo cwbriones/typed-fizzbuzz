@@ -17,17 +17,14 @@ struct Zero;
 struct S<T>(PhantomData<T>);
 
 trait Peano {
-    const VAL: i32;
     type Succ: Peano;
 }
 
 impl Peano for Zero {
-    const VAL: i32 = 0;
     type Succ = S<Self>;
 }
 
 impl<T> Peano for S<T> where T: Peano {
-    const VAL: i32 = <T as Peano>::VAL + 1;
     type Succ = S<Self>;
 }
 
@@ -39,12 +36,6 @@ type N4 = S<N3>;
 type N5 = S<N4>;
 type N16 = S<Add<Add<N5, N5>, N5>>;
 
-trait PeanoEqual<U> { type Res; }
-impl PeanoEqual<Zero> for Zero { type Res = True; }
-impl<T> PeanoEqual<S<T>> for Zero { type Res = False; }
-impl<T> PeanoEqual<Zero> for S<T> { type Res = False; }
-impl<T, U> PeanoEqual<S<U>> for S<T> where T: PeanoEqual<U> { type Res = T::Res; }
-
 trait PeanoGTE<U> { type Res: Bool; }
 impl PeanoGTE<Zero> for Zero { type Res = True; }
 impl<T> PeanoGTE<Zero> for S<T> { type Res = True; }
@@ -53,13 +44,18 @@ impl<T, U> PeanoGTE<S<U>> for S<T> where T: PeanoGTE<U> {
     type Res = T::Res;
 }
 
+// Addition
+
 trait Add_<U> { type Res; }
+
 impl<T> Add_<Zero> for S<T> {
     type Res = S<T>;
 }
+
 impl<T> Add_<T> for Zero {
     type Res = T;
 }
+
 impl<T, U> Add_<S<U>> for S<T>
     where
         T: Add_<S<U>>
@@ -68,6 +64,8 @@ impl<T, U> Add_<S<U>> for S<T>
 }
 
 type Add<LHS, RHS> = <LHS as Add_<RHS>>::Res;
+
+// Subtraction
 
 trait Sub_<U> { type Res; }
 
@@ -86,6 +84,8 @@ impl<T, U> Sub_<S<U>> for S<T>
 }
 
 type Sub<T, U> = <T as Sub_<U>>::Res;
+
+// Divisibility Checks
 
 trait Div3 {
     type Out: Bool;
@@ -126,22 +126,67 @@ impl Div5 for N4 { type Out = False; }
 struct True;
 struct False;
 
-trait Bool {
-    const VAL: bool;
-}
+trait Bool {}
+impl Bool for True {}
+impl Bool for False {}
+
 trait BoolTrue {}
 trait BoolFalse {}
 
-impl Bool for True {
-    const VAL: bool = true;
-}
-impl Bool for False {
-    const VAL: bool = false;
-}
 impl BoolTrue for True {}
 impl BoolFalse for False {}
 
+// Lists
+
+struct Nil;
+struct Cons<X, Xs>(PhantomData<X>, PhantomData<Xs>);
+
+trait List {}
+impl List for Nil {}
+impl<X, Xs: List> List for Cons<X, Xs> {}
+
+trait ReverseRec<Acc> {
+    type Out;
+}
+
+// Reverse(Nil, Acc) -> Acc
+impl<Acc> ReverseRec<Acc> for Nil {
+    type Out = Acc;
+}
+
+// Reverse(X:Xs, Acc) -> Reverse(Xs, X:Acc)
+impl<X, Xs, Acc> ReverseRec<Acc> for Cons<X, Xs>
+    where
+        Xs: ReverseRec<Cons<X, Acc>>
+{
+    type Out = <Xs as ReverseRec<Cons<X, Acc>>>::Out;
+}
+
+type Reverse<Xs> = <Xs as ReverseRec<Nil>>::Out;
+
+trait Range_ { type Res: List; }
+impl Range_ for Zero { type Res = Nil; }
+impl<T> Range_ for S<T>
+    where T: Range_ + Peano
+{
+    type Res = Cons<T, <T as Range_>::Res>;
+}
+
+type Range<N> = Reverse<<N as Range_>::Res>;
+
+trait Apply<T> { type Res; }
+
+trait Map_<F> { type Res; }
+impl<F> Map_<F> for Nil { type Res = Nil; }
+impl<F, X, Xs> Map_<F> for Cons<X, Xs>
+    where F: Apply<X>,
+          Xs: Map_<F>
+{ type Res = Cons<<F as Apply<X>>::Res, <Xs as Map_<F>>::Res>; }
+
+type Map<F, Xs> = <Xs as Map_<F>>::Res;
+
 // Fizz Buzz!
+
 struct Fizz;
 struct Buzz;
 struct FizzBuzz;
@@ -188,58 +233,3 @@ impl<T> Apply<T> for FizzBuzzFn
     type Res = <T as FizzBuzz_>::Out;
 }
 
-// Lists
-struct Nil;
-struct Cons<X, Xs>(PhantomData<X>, PhantomData<Xs>);
-
-trait List {}
-impl List for Nil {}
-impl<X, Xs: List> List for Cons<X, Xs> {}
-
-trait Reverse {
-    type Out;
-}
-
-impl<T> Reverse for T
-    where T: ReverseRec<Nil>
-{
-    type Out = <T as ReverseRec<Nil>>::Out;
-}
-
-trait ReverseRec<Acc> {
-    type Out;
-}
-
-// Reverse(Nil, Acc) -> Acc
-impl<Acc> ReverseRec<Acc> for Nil {
-    type Out = Acc;
-}
-
-// Reverse(X:Xs, Acc) -> Reverse(Xs, X:Acc)
-impl<X, Xs, Acc> ReverseRec<Acc> for Cons<X, Xs>
-    where
-        Xs: ReverseRec<Cons<X, Acc>>
-{
-    type Out = <Xs as ReverseRec<Cons<X, Acc>>>::Out;
-}
-
-trait Range_ { type Res: List; }
-impl Range_ for Zero { type Res = Nil; }
-impl<T> Range_ for S<T>
-    where T: Range_ + Peano
-{
-    type Res = Cons<T, <T as Range_>::Res>;
-}
-
-type Range<N> = <<N as Range_>::Res as Reverse>::Out;
-
-trait Apply<T> { type Res; }
-
-trait Map_<F> { type Res; }
-impl<F> Map_<F> for Nil { type Res = Nil; }
-impl<F, X, Xs> Map_<F> for Cons<X, Xs>
-    where F: Apply<X>,
-          Xs: Map_<F>
-{ type Res = Cons<<F as Apply<X>>::Res, <Xs as Map_<F>>::Res>; }
-
-type Map<F, Xs> = <Xs as Map_<F>>::Res;
